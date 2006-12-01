@@ -6,6 +6,7 @@
 #include <vector>
 #include<string>
 #include <string.h>
+#include <map>
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
@@ -81,6 +82,49 @@ void * input_thread (void *) {
 bool myisblank(char c) {
  return c==' '||c=='\r'||c=='\n'||c=='\t';
 }
+std::vector<std::string> presents;
+std::vector<std::string> continents;
+std::map<std::string,std::string> locations;
+std::map<std::string,std::string> goals;
+void init_presents() {
+    continents.push_back("europe");
+    continents.push_back("asia");
+    continents.push_back("america");
+    continents.push_back("australia");
+    continents.push_back("africa");
+    continents.push_back("south_america");
+    presents.push_back("doll");
+    presents.push_back("clothes");
+    presents.push_back("train");
+    presents.push_back("lego");
+    presents.push_back("gingerbread");
+    presents.push_back("cookies");
+    presents.push_back("coal");
+    presents.push_back("toy house");
+    presents.push_back("wii");
+    presents.push_back("kitten");
+    presents.push_back("puppy");
+}
+void make_goals() {
+    goals.clear();
+    for (unsigned int i=0;i<presents.size();++i) {
+	if (rand()<RAND_MAX/2) {
+	    unsigned int j=(unsigned int)(rand()%continents.size());
+	    if (locations[presents[i]]!=continents[j]) {
+		goals[presents[i]]=continents[j];
+		printf("Deliver %s to %s\n",presents[i].c_str(),continents[j].c_str());
+	    }
+	}
+    }
+}
+bool check_goals() {
+    for (std::map<std::string,std::string>::iterator i=goals.begin();i!=goals.end();++i) {
+	if (locations[i->first]!=i->second) {
+	    return false;
+	}
+    }
+    return true;
+}
 int main(int argc, char ** argv)
 {
   {
@@ -103,8 +147,8 @@ int main(int argc, char ** argv)
     delete []parentdir;
   }    
   chdir("data");
-
-
+  init_presents();
+  
   char tmphandle[2048]="12345678910111213141516";
   while (strlen(tmphandle)>16) {
     std::cout << "What is your handle (under 16 chars please)?\n";
@@ -118,7 +162,8 @@ int main(int argc, char ** argv)
 #else
   pthread_t thread_id;
 #endif
-  if(1) {
+  int total_score=0;
+  while(1) {
 #ifdef _WIN32
       mutex=CreateMutex(NULL,FALSE,NULL);
 #else
@@ -131,6 +176,7 @@ int main(int argc, char ** argv)
 #endif
       mymicro_sleep(131000);
       int total_time=45;
+      make_goals();
       while(total_time>=0) {
 	  bool forcepost=false;
           bool doexit=false;
@@ -140,15 +186,24 @@ int main(int argc, char ** argv)
               strcpy(input_text[2],handle);
 	      strcat(input_text[2],input_text[0]);
 	      ready=false;
-              if (strncmp(input_text[1],"exit",4)==0)
+	      std::string it=input_text[1];
+	      if (it.find(" ")!=std::string::npos) {
+		  std::string continent=it.substr(0,it.find(" "));
+		  std::string toy=it.substr(it.find(" ")+1);
+		  locations[toy]=continent;
+		  if (goals[toy]==continent) printf("YAYYY\n");
+	      }
+              if (check_goals())
                 doexit=true;
+	      
 	      forcepost=true;
 	  }
           int ttimeout=1000;//wait a second before checking inputs
           if (forcepost) {
-            printf ("%s\n",input_text[2]);
+	      printf ("%s\n",input_text[2]);
           }else {
-            printf ("Timeout\n");
+			  if (total_time%10==0||total_time<10)
+	      printf ("Timeout %d\n",total_time);
 
           }
           if (doexit){
@@ -171,9 +226,12 @@ int main(int argc, char ** argv)
       }
       if (total_time<0) {
         printf ("You Lose\n");
+	total_score-=1;
       }else {
         printf ("You Win\n");
+	total_score+=100;
       }
+	  printf ("Your total score is %d\n",total_score);
       
   }
   // always cleanup 
