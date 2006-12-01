@@ -141,7 +141,8 @@ int main(int argc, char ** argv)
       pthread_create(&thread_id,NULL,input_thread,NULL);
 #endif
       mymicro_sleep(131000);
-      while(1) {
+      int total_time=45;
+      while(total_time>=0) {
 	  bool forcepost=false;
           bool doexit=false;
 	  if (ready){
@@ -158,7 +159,7 @@ int main(int argc, char ** argv)
 	      if (timeout<mintimeout) timeout=mintimeout;
 	      forcepost=true;
 	  }
-          int ttimeout=(int)(timeout*(1-.25*rand()/(float)RAND_MAX));
+          int ttimeout=1000;//wait a second before checking inputs
           if (forcepost) {
             printf ("%s\n",input_text[2]);
           }else {
@@ -166,14 +167,13 @@ int main(int argc, char ** argv)
 
           }
           if (doexit){
-            exit(0);
+            break;
           }
 #ifdef _WIN32
 	  if (WaitForSingleObject(mutex,ttimeout)==WAIT_OBJECT_0) {
 	      ReleaseMutex(mutex);
 	  }
 #else
-#if 1//def __APPLE__
           for (int i=0;i<ttimeout;++i){
             if (0==pthread_mutex_trylock(&mutex)) {
               pthread_mutex_unlock(&mutex);
@@ -181,17 +181,13 @@ int main(int argc, char ** argv)
             }
             mymicro_sleep(1000);
           }
-
-
-#else
-          timespec tim;
-          tim.tv_sec=ttimeout/1000;
-          tim.tv_nsec=(ttimeout%1000)*1000000;
-          if (0==pthread_mutex_timedlock(&mutex,&tim)) {
-            pthread_mutex_unlock(&mutex);
-          }
 #endif
-#endif
+          total_time-=1;
+      }
+      if (total_time<0) {
+        printf ("You Lose\n");
+      }else {
+        printf ("You Win\n");
       }
       
   }
