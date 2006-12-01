@@ -5,7 +5,9 @@
 #include <istream>
 #include <vector>
 #include<string>
+#include <string.h>
 #ifdef _WIN32
+#include <windows.h>
 #include <direct.h>
 #include <process.h>
 #endif
@@ -116,19 +118,6 @@ int main(int argc, char ** argv)
 #else
   pthread_t thread_id;
 #endif
-  unsigned int mintimeout=1024;
-  unsigned int maxtimeout=65536;
-  unsigned int idletimeout=131072;
-  unsigned int timeout=4096;
-  char *fixedurl="http://begin2.sourceforge.net/cgi-bin/chat.html?history=%d";
-  char url[2048];
-  int historysize=65536;
-  if (argc>1) {
-    int tmp=atoi(argv[1]);
-    if (tmp>1024)
-      historysize=tmp;
-  }
-  sprintf(url,fixedurl,historysize);
   if(1) {
 #ifdef _WIN32
       mutex=CreateMutex(NULL,FALSE,NULL);
@@ -153,10 +142,6 @@ int main(int argc, char ** argv)
 	      ready=false;
               if (strncmp(input_text[1],"exit",4)==0)
                 doexit=true;
-	      timeout=(int)(timeout/2.00);
-              if (timeout>maxtimeout)
-                timeout=mintimeout*4;
-	      if (timeout<mintimeout) timeout=mintimeout;
 	      forcepost=true;
 	  }
           int ttimeout=1000;//wait a second before checking inputs
