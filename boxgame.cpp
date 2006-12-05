@@ -11,10 +11,20 @@
 #include <windows.h>
 #include <direct.h>
 #include <process.h>
+#include "stdafx.h"
+#include "phidget21.h"
+
 #endif
+#define NUM_RFID_READERS 4
+
 char input_text[3][8192]={'\0'};
 char handle[19]={'\0'};
 char * cur_input_text=&input_text[0][0];
+
+CPhidgetRFIDHandle RFID[NUM_RFID_READERS];
+bool RFIDpresent[NUM_RFID_READERS];
+int RFIDserials[NUM_RFID_READERS];
+
 volatile bool ready=false;
 //#define __APPLE__
 #ifdef _WIN32
@@ -125,6 +135,90 @@ bool check_goals() {
     }
     return true;
 }
+
+
+
+int __stdcall RFID_AttachHandler(CPhidgetHandle RFID, void *userptr)
+{
+	int serial;
+	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
+	printf("RFID_AttachHandler handler ran for ID %d!\n",serial);
+	return 0;
+}
+
+int __stdcall RFID_DetachHandler(CPhidgetHandle RFID, void *userptr)
+{
+	int serial;
+	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
+	printf("RFID_DetachHandler handler ran for ID %d!\n",serial);
+	return 0;
+}
+
+int __stdcall RFID_ErrorHandler(CPhidgetHandle RFID, void *userptr, int ErrorCode, const char *unknown)
+{
+	int serial;
+	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
+	printf("RFID_ErrorHandler handler ran for ID %d, Error code %d!\n",serial,ErrorCode);
+	return 0;
+}
+
+/**
+* This is the callback when an RFID tag was received.
+* TODO: link this to game logic code
+*/
+int __stdcall RFID_Handler(CPhidgetRFIDHandle RFID, void *userptr, unsigned char *buf)
+{
+	int serial;
+	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
+	printf("RFID ID: %d; ",serial);	
+	printf("TAG: %x%x%x%x%x%x%x%x%x%x\n", buf[0]/16,buf[0]%16,buf[1]/16,buf[1]%16, buf[2]/16,buf[2]%16, buf[3]/16,buf[3]%16, buf[4]/16,buf[4]%16);
+	return 0;
+}
+void RFID_Init() 
+{
+	int RFIDresult;
+	const char *RFIDerr;
+	
+	for(int j=0;j<NUM_RFID_READERS; j++) {
+		RFID[j]=0;
+		RFIDpresent[j]=false;
+		CPhidgetRFID_create(&(RFID[j]));
+		CPhidget_set_OnAttach_Handler((CPhidgetHandle)(RFID[j]), RFID_AttachHandler, NULL);
+		CPhidget_set_OnDetach_Handler((CPhidgetHandle)(RFID[j]), RFID_DetachHandler, NULL);
+		CPhidget_set_OnError_Handler((CPhidgetHandle)(RFID[j]), RFID_ErrorHandler, NULL);
+		RFIDresult = CPhidgetRFID_set_OnTag_Handler(RFID[j], RFID_Handler, NULL);
+	}
+
+	//hardcoded serial numbers
+	CPhidget_open((CPhidgetHandle)(RFID[0]), 5603); 
+	CPhidget_open((CPhidgetHandle)(RFID[1]), 5573); 
+	CPhidget_open((CPhidgetHandle)(RFID[2]), 5626); 
+	CPhidget_open((CPhidgetHandle)(RFID[3]), 5616); 
+
+	// Try to attach the readers
+	printf("Looking for %d RFID readers (for up to 5 seconds each)...\n",NUM_RFID_READERS);
+	for(int j=0;j<NUM_RFID_READERS; j++) {
+		//Wait for 5 seconds, otherwise exit
+		
+		if(RFIDresult = CPhidget_waitForAttachment((CPhidgetHandle)(RFID[j]), 5000))
+		{
+			CPhidget_getErrorDescription(RFIDresult, &RFIDerr);
+			printf("Problem waiting for attachment: %s\n", RFIDerr);
+			RFIDpresent[j]=false;
+		} else {
+			RFIDpresent[j]=true;
+			CPhidgetRFID_setAntennaOn(RFID[j], true);
+			CPhidgetRFID_setLEDOn(RFID[j], true);
+		}
+	}
+}
+void RFID_Cleanup() {
+	for(int j=0; j<NUM_RFID_READERS; j++) {
+		CPhidget_close((CPhidgetHandle)(RFID[j]));
+		CPhidget_delete((CPhidgetHandle)(RFID[j]));
+	}
+}
+
 int main(int argc, char ** argv)
 {
   {
@@ -149,6 +243,8 @@ int main(int argc, char ** argv)
   chdir("data");
   init_presents();
   
+  RFID_Init(); /* connect all the rfid readers */
+
   char tmphandle[2048]="12345678910111213141516";
   while (strlen(tmphandle)>16) {
     std::cout << "What is your handle (under 16 chars please)?\n";
@@ -235,6 +331,7 @@ int main(int argc, char ** argv)
       
   }
   // always cleanup 
+  RFID_Cleanup();
 
   return 0;
 }
