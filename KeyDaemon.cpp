@@ -3,7 +3,7 @@
 
 #include <windows.h>
 #include <stdio.h>
-
+#include <process.h>
 #define SC_ESC 0x01
 #define SC_Q   0x10
 #define SC_W   0x11
@@ -266,15 +266,16 @@ int main(int argc, const char **argv) {
 	    fclose(fp);
 	    Sleep(6500);
 	    if (lastsame) {
-		SendEsc();
+		//SendEsc();
+		spawnl(P_WAIT,"escrestart.exe","escrestart.exe",NULL);
 	    }
 	    lastsame=true;
 	}else {
 	    FILE * fp=fopen("YAY.txt","a");
 	    fprintf (fp,"Diff\n");
 	    fclose(fp);
-	    SendPan();
-	    lastsame=true;
+	    //SendPan();
+	    lastsame=false;
 	}
 	unsigned char *tmpbuffer=oldbuffer;
 	oldbuffer=buffer;
@@ -288,6 +289,7 @@ int main(int argc, const char **argv) {
 	}else {
 	    sprintf(data,"output%dX.ppm",count++);
 	}
+#if 0
 	FILE * fp = fopen(data,"wb");
 	char* p6head="P6\n1024 768 255\n";
 	fwrite(p6head,1,strlen(p6head),fp);
@@ -305,7 +307,7 @@ int main(int argc, const char **argv) {
 	    }
 	}
 	fclose(fp);
-
+#endif
 	//SendKey(VK_NUMPAD0);
 
 	printf("DONE DONE DONE\n");

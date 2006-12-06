@@ -9,10 +9,10 @@ $i=0
 Sleep(8000)
 Send("{ESCAPE}");
 Sleep(2000)
-MouseClick("left",512,430);
+MouseClick("left",640,558);
 Sleep(1000)
-MouseClick("left",480,415);
+MouseClick("left",600,539);
 Sleep(4000)
-MouseClick("left",512,364);
+MouseClick("left",640,492);
 $i=$i+1
 ;Until ($i>10)

@@ -23,8 +23,7 @@ char * cur_input_text=&input_text[0][0];
 
 CPhidgetRFIDHandle RFID[NUM_RFID_READERS];
 bool RFIDpresent[NUM_RFID_READERS];
-int RFIDserials[NUM_RFID_READERS];
-
+int RFIDserials[NUM_RFID_READERS]={5603,5573,5626,5616};
 volatile bool ready=false;
 //#define __APPLE__
 #ifdef _WIN32
@@ -93,39 +92,157 @@ bool myisblank(char c) {
  return c==' '||c=='\r'||c=='\n'||c=='\t';
 }
 std::vector<std::string> presents;
+std::map<int,int> rfid_serials;
 std::vector<std::string> continents;
+std::map<std::string,int> tag_serials;
 std::map<std::string,std::string> locations;
 std::map<std::string,std::string> goals;
+volatile int curloc=-1;
+volatile int curpres=-1;
 void init_presents() {
-    continents.push_back("europe");
-    continents.push_back("asia");
-    continents.push_back("america");
-    continents.push_back("australia");
-    continents.push_back("africa");
-    continents.push_back("south_america");
+		if (RFIDpresent[0]) {
+		   rfid_serials[RFIDserials[0]]=continents.size();
+           continents.push_back("america");		
+		}
+		if (RFIDpresent[1]) {
+		   rfid_serials[RFIDserials[1]]=continents.size();
+
+           continents.push_back("russia");			
+		}
+		if (RFIDpresent[2]) {
+					   rfid_serials[RFIDserials[2]]=continents.size();
+
+           continents.push_back("europe");			
+		}
+		if (RFIDpresent[3]) {
+          rfid_serials[RFIDserials[3]]=continents.size();
+
+           continents.push_back("china");			
+		}
+	std::string dolltag;
+	dolltag.push_back(0x01);
+	dolltag.push_back(0x00);
+	dolltag.push_back(0x54);
+	dolltag.push_back(0xf0);
+	dolltag.push_back(0x97);
+	tag_serials[dolltag]=presents.size();
     presents.push_back("doll");
+	std::string clothestag;
+	clothestag.push_back(0x01);
+	clothestag.push_back(0x00);
+	clothestag.push_back(0x55);
+	clothestag.push_back(0x11);
+	clothestag.push_back(0x45);
+
+	tag_serials[clothestag]=presents.size();
     presents.push_back("clothes");
+	std::string traintag;
+	traintag.push_back(0x01);
+	traintag.push_back(0x00);
+	traintag.push_back(0x55);
+	traintag.push_back(0x44);
+	traintag.push_back(0x75);
+
+	tag_serials[traintag]=presents.size();
     presents.push_back("train");
+	std::string legotag;
+	legotag.push_back(0x01);
+	legotag.push_back(0x02);
+	legotag.push_back(0x2f);
+	legotag.push_back(0x70);
+	legotag.push_back(0x05);
+
+	tag_serials[legotag]=presents.size();
+
     presents.push_back("lego");
-    presents.push_back("gingerbread");
+
+	std::string atitag;
+	atitag.push_back(0x01);
+	atitag.push_back(0x00);
+	atitag.push_back(0x56);
+	atitag.push_back(0x0a);
+	atitag.push_back(0x94);
+
+	tag_serials[atitag]=presents.size();
+
+    presents.push_back("ATI Radeon X1950");
+	std::string cookiestag;
+	cookiestag.push_back(0x10);
+	cookiestag.push_back(0x00);
+	cookiestag.push_back(0x02);
+	cookiestag.push_back(0xec);
+	cookiestag.push_back(0xf9);
+
+	tag_serials[cookiestag]=presents.size();
+
     presents.push_back("cookies");
+	std::string coaltag;
+	coaltag.push_back(0x01);
+	coaltag.push_back(0x00);
+	coaltag.push_back(0x55);
+	coaltag.push_back(0xde);
+	coaltag.push_back(0x32);
+
+	tag_serials[coaltag]=presents.size();
+
     presents.push_back("coal");
+	std::string housetag;
+	housetag.push_back(0x01);
+	housetag.push_back(0x02);
+	housetag.push_back(0x2f);
+	housetag.push_back(0x7f);
+	housetag.push_back(0x3f);
+
+	tag_serials[housetag]=presents.size();
     presents.push_back("toy house");
+	std::string wiitag;
+	wiitag.push_back(0x01);
+	wiitag.push_back(0x00);
+	wiitag.push_back(0x55);
+	wiitag.push_back(0x6f);
+	wiitag.push_back(0x06);
+
+	tag_serials[wiitag]=presents.size();
+
     presents.push_back("wii");
+	std::string kittentag;
+	kittentag.push_back(0x10);
+	kittentag.push_back(0x00);
+	kittentag.push_back(0x03);
+	kittentag.push_back(0x07);
+	kittentag.push_back(0x38);
+
+	tag_serials[kittentag]=presents.size();
     presents.push_back("kitten");
+	std::string puppytag;
+	puppytag.push_back(0x01);
+	puppytag.push_back(0x00);
+	puppytag.push_back(0x54);
+	puppytag.push_back(0xbd);
+	puppytag.push_back(0x52);
+
+	tag_serials[puppytag]=presents.size();
     presents.push_back("puppy");
+}
+std::string itos(int i) {
+  char tmp[10];
+  sprintf(tmp,"%d",i);
+  return tmp;
 }
 void make_goals() {
     goals.clear();
+	std::string commandline="mplayer.exe --really-quiet intro.wav ";
     for (unsigned int i=0;i<presents.size();++i) {
 	if (rand()<RAND_MAX/2) {
 	    unsigned int j=(unsigned int)(rand()%continents.size());
 	    if (locations[presents[i]]!=continents[j]) {
 		goals[presents[i]]=continents[j];
+		commandline+=itos(((i+1)/10)%10)+itos((i+1)%10)+itos(j+1)+".wav blank.wav ";
 		printf("Deliver %s to %s\n",presents[i].c_str(),continents[j].c_str());
 	    }
 	}
     }
+	system(commandline.c_str());
 }
 bool check_goals() {
     for (std::map<std::string,std::string>::iterator i=goals.begin();i!=goals.end();++i) {
@@ -137,12 +254,21 @@ bool check_goals() {
 }
 
 
-
+volatile bool dorelease=false;
 int __stdcall RFID_AttachHandler(CPhidgetHandle RFID, void *userptr)
 {
 	int serial;
 	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
 	printf("RFID_AttachHandler handler ran for ID %d!\n",serial);
+	static bool initted=false;
+	if (!initted) {
+		initted=true;
+#ifdef _WIN32
+	//dorelease= (WaitForSingleObject(mutex,INFINITE)==WAIT_OBJECT_0);
+#else
+     dorelease=(pthread_mutex_lock(&mutex)==0);
+#endif
+	}
 	return 0;
 }
 
@@ -172,6 +298,39 @@ int __stdcall RFID_Handler(CPhidgetRFIDHandle RFID, void *userptr, unsigned char
 	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
 	printf("RFID ID: %d; ",serial);	
 	printf("TAG: %x%x%x%x%x%x%x%x%x%x\n", buf[0]/16,buf[0]%16,buf[1]/16,buf[1]%16, buf[2]/16,buf[2]%16, buf[3]/16,buf[3]%16, buf[4]/16,buf[4]%16);
+	std::string tagid((char*)buf,5);
+	if (tag_serials.find(tagid)!=tag_serials.end()) { 
+		;
+		curpres=tag_serials[tagid];
+		curloc=rfid_serials[serial];
+		//sprintf(cur_input_text,"%s %s",continents[rfid_serials[serial]].c_str(),presents[tag_serials[tagid]].c_str());
+
+		printf ("SCANNED %s",presents[tag_serials[tagid]].c_str());
+	}else {
+		printf ("NOT A PRESENT");
+	}
+	printf (" DELIVERED to %s\n",continents[rfid_serials[serial]].c_str()); 
+
+     bool no_busy=false;
+	if (no_busy&&dorelease){
+#ifdef _WIN32
+          ReleaseMutex(mutex);
+#else
+          pthread_mutex_unlock(&mutex);
+#endif
+          
+        }
+	ready=true;
+	//while(ready){
+          //mymicro_sleep(4000);
+	//}
+	if(no_busy) {
+#ifdef _WIN32
+	dorelease= (WaitForSingleObject(mutex,INFINITE)==WAIT_OBJECT_0);
+#else
+        dorelease=(pthread_mutex_lock(&mutex)==0);
+#endif
+	}
 	return 0;
 }
 void RFID_Init() 
@@ -190,16 +349,14 @@ void RFID_Init()
 	}
 
 	//hardcoded serial numbers
-	CPhidget_open((CPhidgetHandle)(RFID[0]), 5603); 
-	CPhidget_open((CPhidgetHandle)(RFID[1]), 5573); 
-	CPhidget_open((CPhidgetHandle)(RFID[2]), 5626); 
-	CPhidget_open((CPhidgetHandle)(RFID[3]), 5616); 
+
 
 	// Try to attach the readers
 	printf("Looking for %d RFID readers (for up to 5 seconds each)...\n",NUM_RFID_READERS);
 	for(int j=0;j<NUM_RFID_READERS; j++) {
 		//Wait for 5 seconds, otherwise exit
-		
+		CPhidget_open((CPhidgetHandle)(RFID[j]),RFIDserials[j] ); 
+
 		if(RFIDresult = CPhidget_waitForAttachment((CPhidgetHandle)(RFID[j]), 5000))
 		{
 			CPhidget_getErrorDescription(RFIDresult, &RFIDerr);
@@ -241,15 +398,15 @@ int main(int argc, char ** argv)
     delete []parentdir;
   }    
   chdir("data");
-  init_presents();
   
   RFID_Init(); /* connect all the rfid readers */
+  init_presents();
 
-  char tmphandle[2048]="12345678910111213141516";
-  while (strlen(tmphandle)>16) {
+  char tmphandle[2048]="santa";
+ /* while (strlen(tmphandle)>16) {
     std::cout << "What is your handle (under 16 chars please)?\n";
     mygetline(tmphandle,2047);
-  }
+  }*/
   strncpy(handle,tmphandle,16);
   if (strlen(handle))
     strcat(handle,"> ");
@@ -265,10 +422,12 @@ int main(int argc, char ** argv)
 #else
       pthread_mutex_init(&mutex,NULL);
 #endif
+#if 0
 #ifdef _WIN32
       CreateThread(NULL,0,(LPTHREAD_START_ROUTINE)input_thread,NULL,0,&tid);
 #else
       pthread_create(&thread_id,NULL,input_thread,NULL);
+#endif
 #endif
       mymicro_sleep(131000);
       int total_time=45;
@@ -278,17 +437,18 @@ int main(int argc, char ** argv)
           bool doexit=false;
 	  if (ready){
             //printf  ("DOSending %s\n",input_text[0]);
-	      strcpy(input_text[1],input_text[0]);
-              strcpy(input_text[2],handle);
-	      strcat(input_text[2],input_text[0]);
+
 	      ready=false;
-	      std::string it=input_text[1];
-	      if (it.find(" ")!=std::string::npos) {
-		  std::string continent=it.substr(0,it.find(" "));
-		  std::string toy=it.substr(it.find(" ")+1);
-		  locations[toy]=continent;
-		  if (goals[toy]==continent) printf("YAYYY\n");
-	      }
+		  if (curloc>=0&&curpres>=0) {
+		    std::string continent=continents[curloc];
+		    std::string toy=presents[curpres];
+		  
+		    locations[toy]=continent;
+			if (goals[toy]==continent) {
+				printf("YAYYY\n");
+				system("mplayer.exe --really-quiet yay.wav");
+			}
+		  }
               if (check_goals())
                 doexit=true;
 	      
@@ -298,17 +458,22 @@ int main(int argc, char ** argv)
           if (forcepost) {
 	      printf ("%s\n",input_text[2]);
           }else {
-			  if (total_time%10==0||total_time<10)
-	      printf ("Timeout %d\n",total_time);
-
+			  if (total_time%10==0||total_time<10){
+				  char str[128];
+		         printf ("Timeout %d\n",total_time);
+ 				 sprintf (str,"mplayer.exe --really-quiet %dseconds.wav\n",total_time);
+				 system(str);
+			  }
           }
           if (doexit){
             break;
           }
 #ifdef _WIN32
+		  /*
 	  if (WaitForSingleObject(mutex,ttimeout)==WAIT_OBJECT_0) {
 	      ReleaseMutex(mutex);
-	  }
+	  }*/
+		  Sleep(1000);
 #else
           for (int i=0;i<ttimeout;++i){
             if (0==pthread_mutex_trylock(&mutex)) {
@@ -322,11 +487,13 @@ int main(int argc, char ** argv)
       }
       if (total_time<0) {
         printf ("You Lose\n");
+		system ("mplayer.exe --really-quiet youwin.wav");
 	total_score-=1;
       }else {
         printf ("You Win\n");
 	total_score+=100;
       }
+		system ("mplayer.exe --really-quiet youlose.wav");
 	  printf ("Your total score is %d\n",total_score);
       
   }
