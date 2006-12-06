@@ -224,25 +224,40 @@ void init_presents() {
 	tag_serials[puppytag]=presents.size();
     presents.push_back("puppy");
 }
-std::string itos(int i) {
-  char tmp[10];
-  sprintf(tmp,"%d",i);
+std::wstring itos(int i) {
+  wchar_t tmp[10];
+  int thousands=i/1000%10;
+  int hundreds=i/100%10;
+  int tens=i/10%10;
+  int ones=1%10;
+  wchar_t*t=&tmp[0];
+  if (thousands) *t++='0'+thousands;
+  if (thousands||hundreds) *t++='0'+hundreds;
+  if (thousands||hundreds||tens) *t++='0'+tens;
+  *t++='0'+tens;
+  *t='\0';
   return tmp;
 }
 void make_goals() {
     goals.clear();
-	std::string commandline="mplayer.exe --really-quiet intro.wav ";
+	
+	std::wstring commandline;
+	PlaySoundW(L"intro.wav",NULL,SND_FILENAME|SND_SYNC);
     for (unsigned int i=0;i<presents.size();++i) {
 	if (rand()<RAND_MAX/2) {
 	    unsigned int j=(unsigned int)(rand()%continents.size());
 	    if (locations[presents[i]]!=continents[j]) {
 		goals[presents[i]]=continents[j];
-		commandline+=itos(((i+1)/10)%10)+itos((i+1)%10)+itos(j+1)+".wav blank.wav ";
+		commandline=itos(((i+1)/10)%10)+itos((i+1)%10)+itos(j+1)+L".wav";
+		wchar_t wavfile[128];
+		wsprintf(wavfile,L"%02d%d.wav",i+1,j+1);
+
+		PlaySound(wavfile,NULL,SND_FILENAME|SND_SYNC);
 		printf("Deliver %s to %s\n",presents[i].c_str(),continents[j].c_str());
 	    }
 	}
     }
-	system(commandline.c_str());
+	//system(commandline.c_str());
 }
 bool check_goals() {
     for (std::map<std::string,std::string>::iterator i=goals.begin();i!=goals.end();++i) {
@@ -292,9 +307,11 @@ int __stdcall RFID_ErrorHandler(CPhidgetHandle RFID, void *userptr, int ErrorCod
 * This is the callback when an RFID tag was received.
 * TODO: link this to game logic code
 */
+volatile int playgame=1;
 int __stdcall RFID_Handler(CPhidgetRFIDHandle RFID, void *userptr, unsigned char *buf)
 {
 	int serial;
+	playgame=1;
 	CPhidget_getSerialNumber((CPhidgetHandle)RFID,&serial);
 	printf("RFID ID: %d; ",serial);	
 	printf("TAG: %x%x%x%x%x%x%x%x%x%x\n", buf[0]/16,buf[0]%16,buf[1]/16,buf[1]%16, buf[2]/16,buf[2]%16, buf[3]/16,buf[3]%16, buf[4]/16,buf[4]%16);
@@ -446,7 +463,7 @@ int main(int argc, char ** argv)
 		    locations[toy]=continent;
 			if (goals[toy]==continent) {
 				printf("YAYYY\n");
-				system("mplayer.exe --really-quiet yay.wav");
+				PlaySoundW(L"yay.wav",NULL,SND_FILENAME|SND_SYNC);
 			}
 		  }
               if (check_goals())
@@ -459,10 +476,12 @@ int main(int argc, char ** argv)
 	      printf ("%s\n",input_text[2]);
           }else {
 			  if (total_time%10==0||total_time<10){
-				  char str[128];
+				
 		         printf ("Timeout %d\n",total_time);
- 				 sprintf (str,"mplayer.exe --really-quiet %dseconds.wav\n",total_time);
-				 system(str);
+ 				 //sprintf (str,"%dseconds.wav",total_time);
+				 wchar_t str[16];
+				 wsprintf(str,L"%dseconds.wav",total_time);
+				 PlaySound(str,NULL,SND_FILENAME|SND_ASYNC);
 			  }
           }
           if (doexit){
@@ -487,15 +506,23 @@ int main(int argc, char ** argv)
       }
       if (total_time<0) {
         printf ("You Lose\n");
-		system ("mplayer.exe --really-quiet youwin.wav");
+		PlaySoundW(L"youlose.wav",NULL,SND_FILENAME|SND_SYNC);
+		//system ("mplayer.exe --really-quiet youwin.wav");
 	total_score-=1;
       }else {
-        printf ("You Win\n");
+        PlaySoundW(L"youwin.wav",NULL,SND_FILENAME|SND_SYNC);
+		printf ("You Win\n");
 	total_score+=100;
       }
-		system ("mplayer.exe --really-quiet youlose.wav");
+		//system ("mplayer.exe --really-quiet youlose.wav");
 	  printf ("Your total score is %d\n",total_score);
-      
+      playgame=0;
+	  int count=0;
+	  while(playgame==0) {
+			Sleep(1000);
+			if (count++%180==0)
+			 PlaySoundW(L"playagain.wav",NULL,SND_ASYNC|SND_FILENAME);
+	  }
   }
   // always cleanup 
   RFID_Cleanup();
